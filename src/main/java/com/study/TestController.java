@@ -17,8 +17,7 @@ public class TestController {
     for (int i = 1; i <= 20; i++) {
       Map<String, Object> member = new HashMap<>();
       member.put("id", i);
-      member.put("name", i + "번 개발자");
-      member.put("age", 10 + i);
+      member.put("name", "test" + i);
       members.add(member);
     }
     return members;
