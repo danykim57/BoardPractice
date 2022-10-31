@@ -146,10 +146,14 @@ public class ExcelController {
 
       //ctx.put("FILENAME", "입고상세출력_"+ mapList.get(0).get("PRINT_DATE"));
       //if(file != null) file.deleteOnExit();
+      /***
+       * 폰트 스타일과 문자 삽입은 셀 1개에 적용해도 되지만
+       * 테두리나 셀 색깔과 같은 것은 병합된 모든 셀에 해주어야함
+       */
     }
     catch(Exception e){
+      System.out.println(e.getMessage());
 
-    }finally{
     }
   }
 }
