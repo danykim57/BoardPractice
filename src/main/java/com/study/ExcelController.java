@@ -149,6 +149,8 @@ public class ExcelController {
       /***
        * 폰트 스타일과 문자 삽입은 셀 1개에 적용해도 되지만
        * 테두리나 셀 색깔과 같은 것은 병합된 모든 셀에 해주어야함
+       *
+       * 생성 후 저장이 아닌 다운로드 기능을 할시에는 HttpServletResponse에 담아서 보내야함
        */
     }
     catch(Exception e){
