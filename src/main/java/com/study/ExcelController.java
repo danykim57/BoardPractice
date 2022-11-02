@@ -151,6 +151,12 @@ public class ExcelController {
        * 테두리나 셀 색깔과 같은 것은 병합된 모든 셀에 해주어야함
        *
        * 생성 후 저장이 아닌 다운로드 기능을 할시에는 HttpServletResponse에 담아서 보내야함
+       *
+       * 파일 이름 Response 헤더에 넣을 경우 Response header는 utf8을 지원하지 않는다.
+       *
+       * utf8으로 할 경우에 URIEncoder를 써서 bytecode로 변환 시켜서 프론트로 넘겨주어야한다.
+       *
+       * 프론트에서는 이걸 URIDecoder를 이용하여서 다시 UTF8으로 바꾸어 주어야한다.
        */
     }
     catch(Exception e){
