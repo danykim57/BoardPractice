@@ -1,5 +1,10 @@
 package com.study.security;
 
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
+
 public class Jwt {
   private final String issuer;
 
@@ -21,16 +26,10 @@ public class Jwt {
         .build();
   }
 
-    @Override
-    public String toString() {
-      return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-          .append("userKey", userKey)
-          .append("name", name)
-          .append("email", email)
-          .append("roles", Arrays.toString(roles))
-          .append("iat", iat)
-          .append("exp", exp)
-          .toString();
-    }
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+        .toString();
   }
+
 }
