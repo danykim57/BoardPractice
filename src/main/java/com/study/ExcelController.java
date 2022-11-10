@@ -136,6 +136,16 @@ public class ExcelController {
 
       String localFile = "C:\\" + "테스트_엑셀" + ".xlsx";
 
+      /**
+       *     // 함수값 재 설정
+       *
+       *     for (int i = 1; i <= 12; i++) {
+       *
+       *       getCell(sheet, i, 1).setCellFormula(String.format("AVERAGE(C%d:D%d)", i + 1, i + 1));
+       *
+       *     }
+       */
+
       File file = new File(localFile);
       FileOutputStream fos = null;
       fos = new FileOutputStream(file);
