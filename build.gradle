@@ -31,6 +31,7 @@ dependencies {
     implementation 'com.auth0:java-jwt:4.2.1'
     implementation 'com.google.guava:guava:31.1-jre'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
+    implementation 'com.googlecode.log4jdbc:log4jdbc:1.2'
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
     implementation 'org.apache.poi:poi-ooxml:3.15'
