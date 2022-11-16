@@ -6,6 +6,5 @@ public class PasswordDto {
 
   private  String token;
 
-  @ValidPassword
   private String newPassword;
 }

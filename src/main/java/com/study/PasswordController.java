@@ -1,6 +1,7 @@
 package com.study;
 
 import com.study.common.dto.GenericResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,11 @@ import java.util.Locale;
 import java.util.UUID;
 
 public class PasswordController {
+  @Autowired
+  SecurityService securityService;
+
+  @Autowired
+  UserService userService;
 
   @PostMapping("/user/resetPassword")
   public GenericResponse resetPassword(HttpServletRequest request,
