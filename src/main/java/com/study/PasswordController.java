@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 
 public class PasswordController {
@@ -18,6 +19,9 @@ public class PasswordController {
 
   @Autowired
   UserService userService;
+
+  @Autowired
+  JavaMailSender mailSender;
 
   @PostMapping("/user/resetPassword")
   public GenericResponse resetPassword(HttpServletRequest request,
@@ -50,7 +54,7 @@ public class PasswordController {
   }
 
   @PostMapping("/user/savePassword")
-  public GenericResponse savePassword(final Locale locale, @Valid PasswordDto passwordDto) {
+  public GenericResponse savePassword(final Locale locale, PasswordDto passwordDto) {
 
     String result = securityUserService.validatePasswordResetToken(passwordDto.getToken());
 
