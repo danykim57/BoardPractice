@@ -1,8 +1,11 @@
 package com.study;
 
+import org.springframework.dao.DataAccessException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,5 +25,15 @@ public class TestController {
     }
     return members;
   }
+  @ExceptionHandler({SQLException.class, DataAccessException.class})
+  public String databaseError() {
+    // Nothing to do.  Returns the logical view name of an error page, passed
+    // to the view-resolver(s) in usual way.
+    // Note that the exception is NOT available to this view (it is not added
+    // to the model) but see "Extending ExceptionHandlerExceptionResolver"
+    // below.
+    return "databaseError";
+  }
+
 
 }
