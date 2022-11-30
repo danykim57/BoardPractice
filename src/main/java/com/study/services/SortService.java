@@ -8,12 +8,16 @@ import java.util.stream.Collectors;
 
 public class SortService {
 
-  public Optional<Integer> getMaxNumbs(List<Integer> integers) {
+  public Optional<Integer> getMaxNums(List<Integer> integers) {
     final Comparator<Integer> comp = (p1, p2) -> Integer.compare( p1, p2);
     return integers.stream().max(comp);
   }
 
-  public Map<Integer, List<Integer>> getMinNumbs(List<Integer> integers) {
+  public Map<Integer, List<Integer>> getMinNums(List<Integer> integers) {
     return integers.stream().collect(Collectors.groupingBy(i -> integers.get(i)) );
+  }
+
+  public Double getAverageNums(List<Integer> integers) {
+    return integers.stream().collect(Collectors.averagingInt(i -> integers.get(i)));
   }
 }
