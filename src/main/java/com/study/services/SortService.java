@@ -20,4 +20,8 @@ public class SortService {
   public Double getAverageNums(List<Integer> integers) {
     return integers.stream().collect(Collectors.averagingInt(i -> integers.get(i)));
   }
+  
+  public Double getAverageNums(List<Integer> integers) {
+    return integers.stream().collect(Collectors.averagingDouble(i -> integers.get(i)));
+  }
 }
