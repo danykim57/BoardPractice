@@ -17,7 +17,11 @@ public class SortService {
     return integers.stream().collect(Collectors.groupingBy(i -> integers.get(i)) );
   }
 
-  public Double getAverageNums(List<Integer> integers) {
+  public Double getAverageNumDouble(List<Integer> integers) {
     return integers.stream().collect(Collectors.averagingDouble(i -> integers.get(i)));
+  }
+
+  public Double getAverageNumInt(List<Integer> integers) {
+    return integers.stream().collect(Collectors.averagingInt(i -> integers.get(i)));
   }
 }
