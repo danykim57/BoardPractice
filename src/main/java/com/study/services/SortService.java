@@ -1,10 +1,8 @@
 package com.study.services;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SortService {
 
@@ -24,10 +22,9 @@ public class SortService {
   public Double getAverageNumInt(List<Integer> integers) {
     return integers.stream().collect(Collectors.averagingInt(i -> integers.get(i)));
   }
-  
-  Stream<String> fruits = Stream.of("banana", "apple", "mango", "kiwi", "peach", "cherry", "lemon");
-  HashSet<String> fruitHashSet = fruits.collect(HashSet::new, HashSet::add, HashSet::addAll);
-  for (String s : fruitHashSet) {
-      System.out.println(s);
+
+  public void printFruits() {
+    Stream<String> fruits = Stream.of("banana", "apple", "mango", "kiwi", "peach", "cherry", "lemon");
+    HashSet<String> fruitHashSet = fruits.collect(HashSet::new, HashSet::add, HashSet::addAll);
   }
 }
