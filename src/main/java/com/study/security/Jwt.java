@@ -2,8 +2,14 @@ package com.study.security;
 
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import com.auth0.jwt.interfaces.Claim;
+
+import java.util.Arrays;
+import java.util.Date;
 
 public class Jwt {
   private final String issuer;
@@ -26,10 +32,70 @@ public class Jwt {
         .build();
   }
 
+  public Claims verify(String token) throws JWTVerificationException {
+    return new Claims(jwtVerifier.verify(token));
+  }
+
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
         .toString();
+  }
+
+  static public class Claims {
+    Long userKey;
+    String[] roles;
+    Date iat;
+    Date exp;
+
+    private Claims() {
+    }
+
+    Claims(DecodedJWT decodedJWT) {
+      Claim userKey = decodedJWT.getClaim("userKey");
+      if (!userKey.isNull())
+        this.userKey = userKey.asLong();
+      Claim roles = decodedJWT.getClaim("roles");
+      if (!roles.isNull())
+        this.roles = roles.asArray(String.class);
+      this.iat = decodedJWT.getIssuedAt();
+      this.exp = decodedJWT.getExpiresAt();
+    }
+
+    public static Claims of(long userKey, String name, String[] roles) {
+      Claims claims = new Claims();
+      claims.userKey = userKey;
+      claims.roles = roles;
+      return claims;
+    }
+
+    public long userKey() { return userKey != null ? userKey : -1;}
+
+    long iat() {
+      return iat != null ? iat.getTime() : -1;
+    }
+
+    long exp() {
+      return exp != null ? exp.getTime() : -1;
+    }
+
+    void eraseIat() {
+      iat = null;
+    }
+
+    void eraseExp() {
+      exp = null;
+    }
+
+    @Override
+    public String toString() {
+      return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+          .append("userKey", userKey)
+          .append("roles", Arrays.toString(roles))
+          .append("iat", iat)
+          .append("exp", exp)
+          .toString();
+    }
   }
 
 }
