@@ -28,7 +28,6 @@ dependencies {
     implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:2.2.2'
     implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'       /* Thymeleaf Layout */
     implementation 'org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16'  /* Log4JDBC */
-    // https://mvnrepository.com/artifact/org.apache.poi/poi
     implementation 'org.apache.poi:poi:3.15'
     implementation 'com.auth0:java-jwt:4.2.1'
     implementation 'com.google.guava:guava:31.1-jre'
