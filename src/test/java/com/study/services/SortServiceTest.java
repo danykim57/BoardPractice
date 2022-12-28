@@ -3,6 +3,8 @@ package com.study.services;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledOnJre;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.ArrayList;
@@ -45,6 +47,9 @@ class SortServiceTest {
   }
 
   @Test
-  void printFruits() {
+  @ParameterizedTest(name = "{index} {displayName} message={0} ")
+  @ValueSource(strings = {"메세지", "테스트", "입니다"})
+  void parameterizedTest(String messages) {
+    System.out.println(messages);
   }
 }
