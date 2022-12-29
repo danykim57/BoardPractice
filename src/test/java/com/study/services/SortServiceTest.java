@@ -52,4 +52,11 @@ class SortServiceTest {
   void parameterizedTest(String messages) {
     System.out.println(messages);
   }
+
+  @Test
+  @ParameterizedTest(name = "{index} {displayName} message={0} ")
+  @ValueSource(ints = {1, 2, 3})
+  void parameterizedIntegersTest(Integer integers) {
+    System.out.println(integers);
+  }
 }
