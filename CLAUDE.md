@@ -16,6 +16,7 @@ This is a full-stack web application demonstrating a bulletin board system with:
 - Eureka service discovery
 - Excel export functionality
 - MyBatis for database access
+- Redis-based session caching
 
 ## Codebase Structure
 
@@ -40,6 +41,7 @@ BoardPractice/
     │   │   │   └── SearchDto.java           # Search parameters
     │   │   ├── config/                      # Spring configuration
     │   │   │   ├── DatabaseConfig.java     # MyBatis & HikariCP
+    │   │   │   ├── RedisConfig.java        # Redis connection & session
     │   │   │   ├── ServiceConfigure.java
     │   │   │   ├── WebMvcConfig.java       # Interceptors
     │   │   │   └── WebSocketConfig.java    # WebSocket/STOMP
@@ -50,6 +52,10 @@ BoardPractice/
     │   │   │   ├── PostMapper.java         # MyBatis interface
     │   │   │   ├── PostRequest.java        # Request DTO
     │   │   │   └── PostResponse.java       # Response DTO
+    │   │   ├── domain/session/             # Session management (Redis)
+    │   │   │   ├── UserSession.java        # Session DTO
+    │   │   │   ├── UserSessionService.java # Session business logic
+    │   │   │   └── UserSessionController.java # Session REST API
     │   │   ├── exception/
     │   │   │   └── UserNotFoundException.java
     │   │   ├── filter/                     # Servlet filters
@@ -106,6 +112,7 @@ BoardPractice/
 - **Database**: MySQL 5.7+ running on `localhost:3306`
 - **Database Name**: `board`
 - **Database User**: `root` / `zen911!@` (see `application.properties`)
+- **Redis**: Redis 3.0+ running on `localhost:6379` (for session caching)
 
 ### Database Setup
 ```sql
@@ -114,6 +121,25 @@ CREATE DATABASE board CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- The application expects tables:
 -- - tb_post (with columns: id, title, content, writer, view_cnt, notice_yn, delete_yn, created_date, modified_date)
+```
+
+### Redis Setup
+```bash
+# Install Redis (Ubuntu/Debian)
+sudo apt-get install redis-server
+
+# Install Redis (macOS with Homebrew)
+brew install redis
+
+# Start Redis server
+redis-server
+
+# Or start as a service (Ubuntu/Debian)
+sudo systemctl start redis-server
+
+# Verify Redis is running
+redis-cli ping
+# Should return: PONG
 ```
 
 ### Building the Project
@@ -178,6 +204,11 @@ java -jar build/libs/Board-0.0.1-SNAPSHOT.jar
 - **Apache Commons Lang3** (3.12.0) - String utilities
 - **Google Guava** (31.1-jre) - Collections and utilities
 - **Apache POI** (3.15) - Excel file generation (`.xls` and `.xlsx`)
+
+### Caching & Session Management
+- **Spring Data Redis** - Redis integration for Spring
+- **Spring Session Data Redis** - Redis-backed HTTP session management
+- **Lettuce** (via Spring Boot) - Asynchronous Redis client
 
 ### Testing
 - **JUnit 5** (Jupiter) - Test framework
@@ -311,6 +342,120 @@ return new PagingResponse<>(posts, pagination);
 </select>
 ```
 
+### Redis Session Management Pattern
+
+The codebase implements Redis-backed session caching for user session management alongside JWT authentication:
+
+**Architecture**:
+- **Hybrid Authentication**: JWT for stateless APIs + Redis sessions for session-based endpoints
+- **Redis Storage**: User sessions stored in Redis with automatic expiration (30 minutes)
+- **Spring Session Integration**: Transparent HTTP session management via Redis
+
+**Key Components**:
+
+**1. RedisConfig** (`config/RedisConfig.java`) - Redis connection and template setup
+```java
+@Configuration
+@EnableRedisHttpSession(maxInactiveIntervalInSeconds = 1800) // 30 minutes
+public class RedisConfig {
+    // Configures Lettuce connection factory
+    // RedisTemplate with JSON serialization
+}
+```
+
+**2. UserSession** (`domain/session/UserSession.java`) - Session data model
+```java
+@Builder
+public class UserSession implements Serializable {
+    private Long userKey;
+    private String username;
+    private String[] roles;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastAccessedAt;
+    private String ipAddress;
+    private String userAgent;
+}
+```
+
+**3. UserSessionService** (`domain/session/UserSessionService.java`) - Session operations
+```java
+@Service
+public class UserSessionService {
+    // saveSession(sessionId, userSession) - Store session in Redis
+    // getSession(sessionId) - Retrieve and auto-extend session
+    // deleteSession(sessionId) - Remove session (logout)
+    // extendSession(sessionId) - Manually extend TTL
+    // existsSession(sessionId) - Check session validity
+}
+```
+
+**Usage Example - Creating a Session**:
+```java
+// In controller or service
+UserSession session = UserSession.builder()
+    .userKey(user.getId())
+    .username(user.getUsername())
+    .roles(new String[]{"USER", "ADMIN"})
+    .createdAt(LocalDateTime.now())
+    .ipAddress(request.getRemoteAddr())
+    .build();
+
+userSessionService.saveSession(httpSession.getId(), session);
+```
+
+**REST API Endpoints** (`domain/session/UserSessionController.java`):
+- `POST /api/session/create` - Create new session (login simulation)
+- `GET /api/session/info` - Get current session info
+- `DELETE /api/session/logout` - Delete session (logout)
+- `POST /api/session/extend` - Extend session TTL
+
+**Redis Key Pattern**:
+- Session keys: `boardpractice:user:session:{sessionId}`
+- Automatic TTL: 1800 seconds (30 minutes)
+- Keys namespace: `boardpractice:session`
+
+**Configuration** (`application.properties`):
+```properties
+# Redis connection
+spring.redis.host=localhost
+spring.redis.port=6379
+spring.redis.timeout=2000ms
+
+# Session configuration
+spring.session.store-type=redis
+spring.session.timeout=1800s
+spring.session.redis.namespace=boardpractice:session
+```
+
+**Security Integration** (`security/WebSecurityConfigure.java`):
+- Session policy: `SessionCreationPolicy.IF_REQUIRED`
+- Allows hybrid JWT (stateless) + Redis sessions (stateful) approach
+- `/api/session/**` endpoints use HTTP sessions
+- Other endpoints remain stateless with JWT
+
+**Testing**:
+```java
+// Integration test example (UserSessionServiceTest.java)
+@SpringBootTest
+class UserSessionServiceTest {
+    @Test
+    void testSaveAndRetrieveSession() {
+        userSessionService.saveSession(sessionId, userSession);
+        Optional<UserSession> retrieved = userSessionService.getSession(sessionId);
+        assertThat(retrieved).isPresent();
+    }
+}
+```
+
+**Best Practices**:
+- Always check session existence before operations
+- Use try-catch for Redis connection failures
+- Log session operations for audit trails
+- Clean up sessions on logout
+- Monitor Redis memory usage in production
+- Use Redis persistence (RDB/AOF) for session durability
+- Consider Redis clustering for high availability
+
 ## Testing Guidelines
 
 ### Test Structure
@@ -427,6 +572,10 @@ git push -u origin claude/claude-md-mi2u96pyrxvhr52o-01DemkT7QB26nJ25rRTSXcTB
 | `ExcelController.java` | Excel file generation with Apache POI |
 | `LoggerInterceptor.java` | Logs all HTTP requests/responses |
 | `LogAll.java` | AOP aspect for method-level logging |
+| `RedisConfig.java` | Redis connection factory and template configuration |
+| `UserSession.java` | User session DTO for Redis storage |
+| `UserSessionService.java` | Session CRUD operations with Redis |
+| `UserSessionController.java` | REST API for session management |
 
 ## Configuration Reference
 
@@ -460,13 +609,34 @@ eureka.client.fetch-registry=false
 ```
 Note: Eureka client registration is disabled despite server being enabled.
 
+### Redis Configuration
+```properties
+# Redis connection
+spring.redis.host=localhost
+spring.redis.port=6379
+spring.redis.password=
+spring.redis.timeout=2000ms
+spring.redis.lettuce.pool.max-active=8
+spring.redis.lettuce.pool.max-idle=8
+spring.redis.lettuce.pool.min-idle=0
+
+# Spring Session Redis
+spring.session.store-type=redis
+spring.session.redis.flush-mode=on_save
+spring.session.redis.namespace=boardpractice:session
+spring.session.timeout=1800s
+```
+Note: Session timeout is 30 minutes (1800 seconds). Adjust as needed for production.
+
 ## Security Considerations
 
 ### Current Security Setup
 - **Spring Security**: Enabled but minimally configured
-- **CSRF**: Likely disabled for REST APIs
+- **CSRF**: Disabled for REST APIs
 - **JWT**: Auth0 JWT library present (`Jwt.java`)
+- **Redis Sessions**: Hybrid authentication - JWT + Redis sessions
 - **Password**: Database credentials in plain text (consider Jasypt encryption)
+- **Redis**: No password configured (set password in production)
 
 ### Recommendations for AI Assistants
 1. **Never commit sensitive data**: Passwords, API keys, tokens
@@ -474,6 +644,9 @@ Note: Eureka client registration is disabled despite server being enabled.
 3. **XSS**: Thymeleaf auto-escapes HTML by default
 4. **Authentication**: JWT implementation exists but verify before modifying
 5. **HTTPS**: Application uses HTTP (port 8080), consider HTTPS for production
+6. **Redis Security**: Set `requirepass` in Redis configuration for production
+7. **Session Security**: Monitor Redis for session hijacking attempts
+8. **Redis Persistence**: Enable RDB/AOF to prevent session data loss
 
 ## Troubleshooting
 
@@ -517,6 +690,32 @@ Check IDE supports automatic compilation
 Restart application if changes don't appear
 ```
 
+#### Redis Connection Errors
+```
+Solution: Verify Redis is running on localhost:6379
+Check Redis status: redis-cli ping
+Start Redis: redis-server or sudo systemctl start redis-server
+Check Redis logs: /var/log/redis/redis-server.log
+
+If connection refused:
+- Ensure Redis is running
+- Check firewall settings
+- Verify Redis bind address in redis.conf
+
+If authentication errors:
+- Check spring.redis.password in application.properties
+- Verify Redis requirepass setting
+```
+
+#### Session Not Persisting in Redis
+```
+Check Redis keys: redis-cli KEYS "boardpractice:*"
+Verify session timeout configuration
+Check RedisConfig bean is loaded
+Review logs for serialization errors
+Ensure UserSession implements Serializable
+```
+
 ## Resources & Documentation
 
 ### Spring Boot Documentation
@@ -533,6 +732,9 @@ Restart application if changes don't appear
 - Lombok: https://projectlombok.org/
 - Apache POI: https://poi.apache.org/
 - Auth0 JWT: https://github.com/auth0/java-jwt
+- Redis: https://redis.io/documentation
+- Spring Data Redis: https://spring.io/projects/spring-data-redis
+- Spring Session: https://spring.io/projects/spring-session
 
 ## AI Assistant Guidelines
 

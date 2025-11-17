@@ -24,7 +24,9 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         .exceptionHandling()
         .and()
         .sessionManagement()
-        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        // Redis 세션을 사용하는 엔드포인트를 위해 IF_REQUIRED로 변경
+        // /api/session/** 경로는 세션 사용, 나머지는 JWT 사용
+        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
         .and()
         .authorizeRequests()
         .anyRequest().permitAll()
