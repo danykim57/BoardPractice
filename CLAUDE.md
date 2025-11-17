@@ -545,10 +545,105 @@ Restart application if changes don't appear
    - Respect existing language conventions
 
 2. **Database Operations**:
-   - Always use MyBatis mappers (not JPA entities)
-   - Add SQL to mapper XML files, not inline in Java
+
+   **General Principles**:
+   - Always use MyBatis mappers (not JPA entities, despite JPA dependency)
+   - Add SQL to mapper XML files, NEVER inline in Java code
    - Use `#{}` for parameter binding (prevents SQL injection)
-   - Test with mapper integration tests
+   - Test all mapper methods with integration tests
+
+   **MyBatis Mapper Best Practices**:
+
+   a. **SQL Fragments** - Reuse common column definitions:
+   ```xml
+   <sql id="postColumns">
+       id, title, content, writer, view_cnt, notice_yn, delete_yn, created_date, modified_date
+   </sql>
+
+   <select id="findById">
+       SELECT <include refid="postColumns" />
+       FROM tb_post WHERE id = #{id}
+   </select>
+   ```
+
+   b. **Parameter Binding** - Always use `#{}` for safety:
+   ```xml
+   <!-- CORRECT: Prevents SQL injection -->
+   <select id="findById" parameterType="long">
+       SELECT * FROM tb_post WHERE id = #{id}
+   </select>
+
+   <!-- WRONG: Vulnerable to SQL injection -->
+   <select id="findById" parameterType="long">
+       SELECT * FROM tb_post WHERE id = ${id}  <!-- NEVER DO THIS -->
+   </select>
+   ```
+
+   c. **Dynamic SQL** - Use `<if>`, `<choose>`, `<when>` for conditional queries:
+   ```xml
+   <sql id="search">
+       <if test="keyword != null and keyword != ''">
+           <choose>
+               <when test="'title'.equals(searchType)">
+                   AND title LIKE CONCAT('%', #{keyword}, '%')
+               </when>
+               <when test="'content'.equals(searchType)">
+                   AND content LIKE CONCAT('%', #{keyword}, '%')
+               </when>
+           </choose>
+       </if>
+   </sql>
+   ```
+
+   d. **Auto-Generated Keys** - Retrieve generated IDs after insert:
+   ```xml
+   <insert id="save" parameterType="PostRequest" useGeneratedKeys="true" keyProperty="id">
+       INSERT INTO tb_post (title, content) VALUES (#{title}, #{content})
+   </insert>
+   ```
+   Then access via: `params.getId()` after `mapper.save(params)`
+
+   e. **Soft Delete Pattern** - Use UPDATE instead of DELETE:
+   ```xml
+   <delete id="deleteById" parameterType="long">
+       UPDATE tb_post SET delete_yn = 1 WHERE id = #{id}
+   </delete>
+   ```
+   Always filter soft-deleted records: `WHERE delete_yn = 0`
+
+   f. **Transactions** - Use `@Transactional` on service methods:
+   ```java
+   @Service
+   @RequiredArgsConstructor
+   public class PostService {
+       private final PostMapper postMapper;
+
+       @Transactional  // Ensure atomicity
+       public Long savePost(PostRequest params) {
+           postMapper.save(params);
+           return params.getId();
+       }
+   }
+   ```
+
+   g. **Pagination Queries** - Always include LIMIT for large result sets:
+   ```xml
+   <select id="findAll" parameterType="SearchDto" resultType="PostResponse">
+       SELECT <include refid="postColumns" />
+       FROM tb_post
+       WHERE delete_yn = 0
+       ORDER BY id DESC
+       LIMIT #{pagination.limitStart}, #{recordSize}
+   </select>
+   ```
+
+   **Common Pitfalls to Avoid**:
+   - ❌ Don't use `${}` for user input (SQL injection risk)
+   - ❌ Don't hard-delete records (use `delete_yn = 1` instead)
+   - ❌ Don't forget `WHERE delete_yn = 0` in SELECT queries
+   - ❌ Don't skip `@Transactional` on write operations
+   - ❌ Don't fetch all records without pagination (performance issue)
+   - ❌ Don't use JPA entities when MyBatis mappers exist
 
 3. **Code Style**:
    - Use Lombok annotations extensively
