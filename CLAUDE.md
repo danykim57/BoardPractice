@@ -243,9 +243,73 @@ public interface PostMapper {
 6. **Primary Keys**: Typically `id` (BIGINT AUTO_INCREMENT)
 
 ### Pagination Pattern
-- Use `SearchDto` for pagination parameters (page, recordSize, pageSize)
-- Use `Pagination` class for offset/limit calculations
-- Return `PagingResponse<T>` containing results and pagination metadata
+
+The codebase implements a comprehensive pagination system with three key classes:
+
+**1. SearchDto** (`common/dto/SearchDto.java`) - Request parameters
+```java
+SearchDto params = new SearchDto();
+params.setPage(1);           // Current page (default: 1)
+params.setRecordSize(10);    // Records per page (default: 10)
+params.setPageSize(10);      // Page numbers to display (default: 10)
+params.setKeyword("search"); // Optional search keyword
+params.setSearchType("title"); // Optional search type
+```
+
+Key features:
+- `getOffset()` method calculates SQL LIMIT offset: `(page - 1) * recordSize`
+- Includes search functionality (keyword, searchType)
+- Constructor sets sensible defaults
+
+**2. Pagination** (`paging/Pagination.java`) - Calculation engine
+```java
+Pagination pagination = new Pagination(totalRecordCount, params);
+```
+
+Calculates:
+- `totalPageCount` - Total number of pages
+- `startPage` / `endPage` - Page range for UI (e.g., pages 1-10, 11-20)
+- `limitStart` - SQL LIMIT offset
+- `existPrevPage` / `existNextPage` - Navigation flags
+
+**3. PagingResponse<T>** (`paging/PagingResponse.java`) - Response wrapper
+```java
+PagingResponse<PostResponse> response = new PagingResponse<>(posts, pagination);
+return response;
+```
+
+Contains:
+- `list` - List of results (generic type T)
+- `pagination` - Pagination metadata
+
+**Usage Pattern in Service Layer**:
+```java
+// 1. Get total count
+int totalCount = postMapper.count(params);
+
+// 2. Create pagination
+Pagination pagination = new Pagination(totalCount, params);
+params.setPagination(pagination);
+
+// 3. Fetch paginated data
+List<PostResponse> posts = postMapper.findAll(params);
+
+// 4. Return wrapped response
+return new PagingResponse<>(posts, pagination);
+```
+
+**MyBatis XML Query Example**:
+```xml
+<select id="findAll" parameterType="SearchDto" resultType="PostResponse">
+    SELECT * FROM tb_post
+    WHERE delete_yn = 0
+    <if test="keyword != null and keyword != ''">
+        AND title LIKE CONCAT('%', #{keyword}, '%')
+    </if>
+    ORDER BY id DESC
+    LIMIT #{pagination.limitStart}, #{recordSize}
+</select>
+```
 
 ## Testing Guidelines
 
