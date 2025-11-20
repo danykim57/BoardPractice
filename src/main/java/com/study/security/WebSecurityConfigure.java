@@ -17,14 +17,21 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
   @Override
   protected void configure(HttpSecurity http) throws Exception {
     http
-        // TODO: CRITICAL - CSRF protection is disabled, making the application vulnerable to Cross-Site Request Forgery attacks
-        //  Enable CSRF for session-based endpoints or properly configure for stateless JWT APIs
+        // CSRF protection configured for hybrid authentication approach
+        // Disabled for REST API endpoints (*.json, /api/**) that use JWT
+        // Enabled for session-based form endpoints (*.do) for CSRF protection
         .csrf()
-        .disable()
-        // TODO: CRITICAL - Security headers are disabled, exposing the application to clickjacking, MIME-sniffing, and XSS attacks
-        //  Enable headers and configure: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, etc.
+            .ignoringAntMatchers("/api/**", "/**/*.json", "/members")
+        .and()
+        // Security headers enabled to protect against common vulnerabilities
         .headers()
-        .disable()
+            .frameOptions().deny()                    // Prevent clickjacking
+            .contentTypeOptions().and()               // Prevent MIME-sniffing
+            .xssProtection().and()                    // Enable XSS protection
+            .httpStrictTransportSecurity()            // Enforce HTTPS in production
+                .includeSubDomains(true)
+                .maxAgeInSeconds(31536000)
+        .and()
         .exceptionHandling()
         .and()
         .sessionManagement()
@@ -32,14 +39,22 @@ public class WebSecurityConfigure extends WebSecurityConfigurerAdapter {
         // /api/session/** 경로는 세션 사용, 나머지는 JWT 사용
         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
         .and()
-        // TODO: CRITICAL - Complete security bypass! All requests are permitted without authentication
-        //  Implement proper authentication/authorization:
-        //  - Use JWT authentication for API endpoints
-        //  - Require authentication for sensitive operations (create, update, delete)
-        //  - Configure role-based access control (RBAC) if needed
-        //  Example: .antMatchers("/post/write.do", "/post/save.do", "/post/update.do", "/post/delete.do").authenticated()
+        // Authentication and authorization rules
+        // Public access: static resources, list views, detail views, test endpoints
+        // Protected: write, update, delete operations require authentication
         .authorizeRequests()
-        .anyRequest().permitAll()
+            // Public endpoints - no authentication required
+            .antMatchers("/", "/post/list.do", "/post/view.do").permitAll()
+            .antMatchers("/members", "/api/session/create").permitAll()
+            .antMatchers("/static/**", "/css/**", "/js/**", "/images/**").permitAll()
+
+            // Protected endpoints - authentication required
+            .antMatchers("/post/write.do", "/post/save.do", "/post/save.json").authenticated()
+            .antMatchers("/post/update.do", "/post/delete.do").authenticated()
+            .antMatchers("/api/session/info", "/api/session/logout", "/api/session/extend").authenticated()
+
+            // Default: allow all other requests (can be changed to authenticated() for stricter security)
+            .anyRequest().permitAll()
         .and()
         // JWT 인증을 사용하므로 form 로긴은 비활성처리
         .formLogin()
